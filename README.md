@@ -26,6 +26,7 @@ produce advanced jq filters for processing JSON logs.
 
 ## Overview
 
+```
 .
 ├── README.md            →  This file
 ├── src
@@ -36,6 +37,7 @@ produce advanced jq filters for processing JSON logs.
 │   └── reports.sh       →  Sample script to generate advanced reports
 └── test
     └── filter_tests.sh  →  Unit tests for jq_filters.sh
+```
 
 ## Requirements
 
