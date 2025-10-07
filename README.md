@@ -16,7 +16,7 @@ produce advanced jq filters for processing JSON logs.
 
   * Normalize timestamps to ISO 8601 in local timezone:
     - Preserves readability.
-    - Make them sortable. 
+    - Ensures sortability. 
     - Keep interoperability.
 
   * Filter logs by time range.
@@ -55,7 +55,7 @@ produce advanced jq filters for processing JSON logs.
 
 ## Documentation
 
-    * [jq filter generators](doc/jq_filters.md) for detailed usage instructions and examples.
+  * [jq filter generators](doc/jq_filters.md) for detailed usage instructions and examples.
 
 ## Testing
 
