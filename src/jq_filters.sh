@@ -2,7 +2,7 @@
 #
 # USAGE:
 #   1. Import filters:
-#      `source ~/bin/jq_filters.sh`
+#      `source ./path/to/jq_filters.sh`
 #   2. Use filters:
 #      `cat some.log | jq "$(f1 args..) | $(f2 args...)"
 #
