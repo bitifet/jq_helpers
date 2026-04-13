@@ -83,16 +83,31 @@ The script defines the following functions within a `main` function, which is ca
 ### `jq_period <start> <end>`
 - **Purpose**: Checks if an input timestamp falls within a specified time period (inclusive).
 - **Arguments**:
-  - `start`: Start of the period (any format supported by `jq_toTimestamp`).
-  - `end`: End of the period (any format supported by `jq_toTimestamp`).
+  - `start`: Start of the period as a **plain timestamp string** (any format supported by `jq_toTimestamp`).
+  - `end`: End of the period as a **plain timestamp string** (any format supported by `jq_toTimestamp`).
 - **Input**: A timestamp (same formats as `jq_toTimestamp`).
 - **Output**: `true` if the timestamp is within `[start, end]`, `false` otherwise, or an error if the input is invalid.
 - **Logic**:
+  - Converts `start` and `end` to jq string literals automatically (no extra quoting needed in the shell call).
   - Converts the input, `start`, and `end` to epoch seconds using `jq_toTimestamp`.
   - Checks if the input timestamp is `>= start` and `<= end`.
 - **Example**:
   ```bash
-  echo '"2025-09-24T13:17:06Z"' | jq "$(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\")"
+  echo '"2025-09-24T13:17:06Z"' | jq "$(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z")"
+  # Output: true
+  ```
+
+### `jq_period_expr <start_expr> <end_expr>`
+- **Purpose**: Like `jq_period` but accepts **raw jq expressions** for start and end.  Use when the period boundaries are jq string literals, come from the input JSON, or are any other valid jq expression.
+- **Arguments**:
+  - `start_expr`: A jq expression that evaluates to the start of the period.
+  - `end_expr`: A jq expression that evaluates to the end of the period.
+- **Input**: A timestamp (same formats as `jq_toTimestamp`).
+- **Output**: `true` if the timestamp is within `[start_expr, end_expr]`, `false` otherwise.
+- **Example**:
+  ```bash
+  # With jq string literals:
+  echo '"2025-09-24T13:17:06Z"' | jq "$(jq_period_expr '"2025-09-24T00:00:00Z"' '"2025-10-07T23:59:59Z"')"
   # Output: true
   ```
 
@@ -148,7 +163,7 @@ Below are examples demonstrating how to use the `jq_filters.sh` functions to pro
 3. **Filter Logs Within a Date Range**:
    Select logs where the `time` field falls within a specified period.
    ```bash
-   echo '{"time": "2025-09-24T13:17:06Z"}' | jq "$(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\")"
+   echo '{"time": "2025-09-24T13:17:06Z"}' | jq "$(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z")"
    # Output: true
    ```
 
@@ -167,7 +182,7 @@ These examples demonstrate more complex log processing scenarios, such as filter
    ```bash
    zcat myApp-watchdog__2025-09-24.log.gz | grep '^{' | jq "
      select(
-       (.time | $(jq_period \"2025-09-24T13:17:06.438+0200\" \"2025-09-24T15:17:06.438+0200\"))
+       (.time | $(jq_period "2025-09-24T13:17:06.438+0200" "2025-09-24T15:17:06.438+0200"))
        and (.module == \"watchdog\")
      )
      | .time = (.time | $(jq_fromTimestamp))
@@ -198,7 +213,7 @@ These examples demonstrate more complex log processing scenarios, such as filter
    ```bash
    zcat myApp-pro-error__2025-09-24.log.gz | grep '^{' | jq "
      select(
-       (.time | $(jq_period \"2025-09-24T13:17:06.438+0200\" \"2025-09-24T15:17:06.438+0200\"))
+       (.time | $(jq_period "2025-09-24T13:17:06.438+0200" "2025-09-24T15:17:06.438+0200"))
        and (.connection.type == \"httpserver\")
        and (.elapsed > 10000)
      )
@@ -235,7 +250,7 @@ These examples demonstrate more complex log processing scenarios, such as filter
    Count the number of log entries per module within a specified time period, useful for summarizing log activity.
    ```bash
    zcat myApp__2025-09-24.log.gz | grep '^{' | jq "
-     select(.time | $(jq_period \"2025-09-24T00:00:00Z\" \"2025-09-24T23:59:59Z\"))
+     select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-09-24T23:59:59Z"))
      | .time = (.time | $(jq_fromTimestamp))
      | group_by(.module)
      | map({ module: .[0].module, count: length })

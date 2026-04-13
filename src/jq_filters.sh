@@ -131,6 +131,20 @@ function main() {
 
     # jq_period() <check if current time is within start and end time>{{{
     jq_period() {
+      local start_jq end_jq
+      start_jq=$(jq -Rn --arg s "$1" '$s')
+      end_jq=$(jq -Rn --arg s "$2" '$s')
+      echo ". |
+          (. | $(jq_toTimestamp)) as \$current
+          | (${start_jq} | $(jq_toTimestamp)) as \$start
+          | (${end_jq} | $(jq_toTimestamp)) as \$end
+          | (\$current >= \$start and \$current <= \$end)
+      "
+    }
+    # }}}
+
+    # jq_period_expr() <check if current time is within start and end jq expressions>{{{
+    jq_period_expr() {
       local start="$1"
       local end="$2"
       echo ". |
@@ -150,10 +164,11 @@ function main() {
                 cat << 'EOF'
 Available jq filter functions (source jq_filters.sh to use them):
 
-  jq_toTimestamp            Convert any timestamp to epoch seconds
-  jq_fromTimestamp          Convert any timestamp to ISO 8601 in local timezone
-  jq_period <start> <end>   Check if a timestamp falls within a time period
-  jq_invalidtimeformat      Detect timestamps not in ISO 8601 format
+  jq_toTimestamp                  Convert any timestamp to epoch seconds
+  jq_fromTimestamp                Convert any timestamp to ISO 8601 in local timezone
+  jq_period <start> <end>         Check if a timestamp falls within a time period (plain timestamps)
+  jq_period_expr <expr> <expr>    Like jq_period but accepts raw jq expressions for start/end
+  jq_invalidtimeformat            Detect timestamps not in ISO 8601 format
 
 Run 'jq_help <function>' for detailed help and usage examples.
 EOF
@@ -224,11 +239,16 @@ SYNOPSIS
 
 DESCRIPTION
   Returns true if the input timestamp is within [start, end] (inclusive).
+  <start> and <end> are plain timestamp strings (not jq expressions): they are
+  automatically converted to jq string literals internally.
   All timestamp arguments accept any format supported by jq_toTimestamp.
 
+  For passing raw jq expressions (e.g. .start, .end, or "2025-..." jq literals)
+  use jq_period_expr instead.
+
 ARGUMENTS
-  start   Start of the period
-  end     End of the period
+  start   Start of the period (plain timestamp string)
+  end     End of the period (plain timestamp string)
 
 OUTPUT
   true or false
@@ -242,6 +262,40 @@ EXAMPLES
     select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z"))
     | .time |= $(jq_fromTimestamp)
   "
+EOF
+                ;;
+            jq_period_expr)
+                cat << 'EOF'
+jq_period_expr <start_expr> <end_expr> — Check if a timestamp falls within a period (jq expressions)
+
+SYNOPSIS
+  echo '<json>' | jq "$(jq_period_expr "<start_expr>" "<end_expr>")"
+
+DESCRIPTION
+  Like jq_period, but <start_expr> and <end_expr> are raw jq expressions that
+  are injected as-is into the generated jq filter.  Use this when the period
+  boundaries come from the input JSON itself (e.g. .start, .end) or when you
+  already have a jq string literal (e.g. "2025-09-24T00:00:00Z").
+
+  For plain timestamp strings use jq_period instead.
+
+ARGUMENTS
+  start_expr   jq expression that evaluates to the start of the period
+  end_expr     jq expression that evaluates to the end of the period
+
+OUTPUT
+  true or false
+
+EXAMPLES
+  # Using jq string literals as start/end:
+  echo '"2025-09-24T13:17:06Z"' | \
+      jq "$(jq_period_expr '"2025-09-24T00:00:00Z"' '"2025-10-07T23:59:59Z"')"
+  # Output: true
+
+  # Using jq variables for bounds stored in the input JSON:
+  echo '{"time":"2025-09-24T13:17:06Z","from":"2025-09-24T00:00:00Z","to":"2025-10-07T23:59:59Z"}' | \
+      jq ". as \$r | \$r.time | $(jq_period_expr '$r.from' '$r.to')"
+  # Output: true  (note: escape $ in the outer double-quoted jq string to avoid shell expansion)
 EOF
                 ;;
             jq_invalidtimeformat)
@@ -279,7 +333,15 @@ SYNOPSIS
   jq_help <function>    Detailed help for a specific function
 
 AVAILABLE FUNCTIONS
-  jq_toTimestamp, jq_fromTimestamp, jq_period, jq_invalidtimeformat, jq_help
+  jq_toTimestamp, jq_fromTimestamp, jq_period, jq_period_expr,
+  jq_invalidtimeformat, jq_help
+
+WHEN TO USE jq_period vs jq_period_expr
+  jq_period     — pass plain timestamp strings (e.g. "2025-09-24T00:00:00Z").
+                  They are automatically quoted as jq string literals.
+  jq_period_expr — pass raw jq expressions (e.g. .start, "2025-09-24T00:00:00Z").
+                   Use when the period bounds come from the JSON input itself
+                   or when you already have a jq string literal.
 EOF
                 ;;
             *)
