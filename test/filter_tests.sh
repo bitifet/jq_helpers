@@ -81,7 +81,7 @@ run_test_suite "$heading" "$testFilter" "${tests[@]}"
 heading="Running tests for jq_period filter"
 # ------------------------------------------------
 
-testFilter="$(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\")"
+testFilter="$(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z")"
 
 # Array of tests: (message, input, expected_output)
 tests=(
@@ -94,6 +94,26 @@ tests=(
     "at period start (ISO 8601)                  ; \"2025-09-24T00:00:00Z\"      ; \"true\""
     "at period end (ISO 8601)                    ; \"2025-10-07T23:59:59Z\"      ; \"true\""
     "invalid timestamp                           ; \"175aa62093\"                ; \"false\"" # No or bad timestamp => not in period.
+)
+
+run_test_suite "$heading" "$testFilter" "${tests[@]}"
+
+
+
+##################################################
+heading="Running tests for jq_period_expr filter"
+# ------------------------------------------------
+
+testFilter="$(jq_period_expr '"2025-09-24T00:00:00Z"' '"2025-10-07T23:59:59Z"')"
+
+# Array of tests: (message, input, expected_output)
+tests=(
+    "within period (ISO 8601 with Z)             ; \"2025-09-24T13:17:06Z\"      ; \"true\""
+    "within period (ISO 8601 with offset)        ; \"2025-09-24T15:17:06+0200\"  ; \"true\""
+    "before period (ISO 8601)                    ; \"2025-09-23T23:59:59Z\"      ; \"false\""
+    "after period (ISO 8601)                     ; \"2025-10-08T00:00:00Z\"      ; \"false\""
+    "at period start (ISO 8601)                  ; \"2025-09-24T00:00:00Z\"      ; \"true\""
+    "at period end (ISO 8601)                    ; \"2025-10-07T23:59:59Z\"      ; \"true\""
 )
 
 run_test_suite "$heading" "$testFilter" "${tests[@]}"

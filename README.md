@@ -76,6 +76,7 @@ function **outputs a jq filter string** that is meant to be interpolated into a
 | `jq_toTimestamp` | Convert any timestamp to epoch seconds |
 | `jq_fromTimestamp` | Convert any timestamp to ISO 8601 in local timezone |
 | `jq_period <start> <end>` | Check if a timestamp falls within a time period |
+| `jq_period_expr <start_expr> <end_expr>` | Like `jq_period` but accepts raw jq expressions |
 | `jq_invalidtimeformat` | Detect timestamps not in ISO 8601 format |
 | `jq_help [function]` | Show help, or detailed help for a specific function |
 
@@ -91,6 +92,7 @@ jq_help
 jq_help jq_toTimestamp
 jq_help jq_fromTimestamp
 jq_help jq_period
+jq_help jq_period_expr
 jq_help jq_invalidtimeformat
 ```
 
@@ -138,7 +140,8 @@ echo '1758796626' | jq "$(jq_fromTimestamp)"
 ### `jq_period <start> <end>`
 
 Returns `true` if the input timestamp falls within `[start, end]` (inclusive).
-Both `start` and `end` accept any format supported by `jq_toTimestamp`.
+Both `start` and `end` are **plain timestamp strings** — they are automatically
+converted to jq string literals internally, so no extra quoting is needed.
 
 ```bash
 # Check a standalone timestamp:
@@ -153,6 +156,24 @@ cat app.log | jq "
   select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z"))
   | .time |= $(jq_fromTimestamp)
 "
+```
+
+### `jq_period_expr <start_expr> <end_expr>`
+
+Advanced variant of `jq_period` that accepts **raw jq expressions** for
+`start_expr` and `end_expr`. Use this when the period boundaries are jq string
+literals (already quoted), come from fields in the input JSON, or are any other
+valid jq expression.
+
+```bash
+# Using jq string literals (note the inner single-quotes preserving the double-quotes):
+echo '"2025-09-24T13:17:06Z"' | jq "$(jq_period_expr '"2025-09-24T00:00:00Z"' '"2025-10-07T23:59:59Z"')"
+# Output: true
+
+# When the bounds are stored in the JSON input itself (escape $ to prevent shell expansion):
+echo '{"time":"2025-09-24T13:17:06Z","from":"2025-09-24T00:00:00Z","to":"2025-10-07T23:59:59Z"}' | \
+  jq ". as \$r | \$r.time | $(jq_period_expr '$r.from' '$r.to')"
+# Output: true
 ```
 
 ### `jq_invalidtimeformat`
