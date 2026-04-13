@@ -17,7 +17,7 @@ function main() {
     ### Config Section ###
     ### ############## ###
 
-    # Text timestamps format (other than ISO 8661):
+    # Text timestamps format (other than ISO 8601):
     NON_ISO_TIMESTAMP="%d/%m/%Y, %H:%M:%S"
 
     # Time zone for NON_ISO_TIMESTAMP:
@@ -87,7 +87,7 @@ function main() {
             try (
               ((\$parts.oSign + \$parts.oHours) | tonumber | . * 3600) # offsetHours
               + ((\$parts.oSign + \$parts.oMins) | tonumber | . * 60) # offsetMins
-            ) catch ( # If catpured it should be "Z" or empty (no tz info)
+            ) catch ( # If captured it should be "Z" or empty (no tz info)
               if \$parts.tzSpec == \"Z\" then 0   ## UTC
               else ${TZ_OFFSET}                   ## Local time zone offset
               end
@@ -141,6 +141,160 @@ function main() {
       "
     }
     # }}}
+
+    # jq_help() <show help for jq filter functions>{{{
+    jq_help() {
+        local func="${1:-}"
+        case "$func" in
+            "")
+                cat << 'EOF'
+Available jq filter functions (source jq_filters.sh to use them):
+
+  jq_toTimestamp            Convert any timestamp to epoch seconds
+  jq_fromTimestamp          Convert any timestamp to ISO 8601 in local timezone
+  jq_period <start> <end>   Check if a timestamp falls within a time period
+  jq_invalidtimeformat      Detect timestamps not in ISO 8601 format
+
+Run 'jq_help <function>' for detailed help and usage examples.
+EOF
+                ;;
+            jq_toTimestamp)
+                cat << 'EOF'
+jq_toTimestamp — Convert any timestamp to epoch seconds
+
+SYNOPSIS
+  echo '"<timestamp>"' | jq "$(jq_toTimestamp)"
+
+DESCRIPTION
+  Converts a timestamp in any supported format to epoch seconds (UTC).
+
+SUPPORTED FORMATS
+  • ISO 8601 with offset:  "2025-09-24T13:17:06.438+0200"
+  • ISO 8601 UTC (Z):      "2025-09-24T13:17:06.438Z"
+  • ISO 8601 no timezone:  "2025-09-24T13:17:06.438"  (assumes local TZ)
+  • Custom format:         "24/9/2025, 0:00:12"  (see NON_ISO_TIMESTAMP)
+  • Epoch milliseconds:    "1759762093142" or 1759762093142
+  • Epoch seconds:         "1759762093" or 1759762093
+
+EXAMPLES
+  echo '"2025-09-24T13:17:06.438+0200"' | jq "$(jq_toTimestamp)"
+  # Output: 1758796626
+
+  echo '{"time": "2025-09-24T13:17:06Z"}' | jq ".time |= $(jq_toTimestamp)"
+  # Output: {"time": 1758796626}
+EOF
+                ;;
+            jq_fromTimestamp)
+                cat << 'EOF'
+jq_fromTimestamp — Convert any timestamp to ISO 8601 in local timezone
+
+SYNOPSIS
+  echo '"<timestamp>"' | jq "$(jq_fromTimestamp)"
+
+DESCRIPTION
+  Converts any supported timestamp to an ISO 8601 string in the local
+  timezone (as set by the TZ variable or the system timezone).
+
+INPUT
+  Any format supported by jq_toTimestamp.
+
+OUTPUT
+  ISO 8601 string with local timezone offset (e.g. "2025-09-24T13:17:06+0200").
+
+EXAMPLES
+  echo '"2025-09-24T13:17:06Z"' | jq "$(jq_fromTimestamp)"
+  # Output: "2025-09-24T15:17:06+0200"  (assuming TZ=+0200)
+
+  echo '{"time": "2025-09-24T13:17:06Z"}' | jq ".time |= $(jq_fromTimestamp)"
+  # Output: {"time": "2025-09-24T15:17:06+0200"}
+
+  echo '1758796626' | jq "$(jq_fromTimestamp)"
+  # Output: "2025-09-24T13:17:06+0200"  (epoch seconds → local ISO 8601)
+
+  cat app.log | jq ".time |= $(jq_fromTimestamp)"
+  # Normalize every .time field in a log stream to local ISO 8601
+EOF
+                ;;
+            jq_period)
+                cat << 'EOF'
+jq_period <start> <end> — Check if a timestamp falls within a period
+
+SYNOPSIS
+  echo '"<timestamp>"' | jq "$(jq_period "<start>" "<end>")"
+
+DESCRIPTION
+  Returns true if the input timestamp is within [start, end] (inclusive).
+  All timestamp arguments accept any format supported by jq_toTimestamp.
+
+ARGUMENTS
+  start   Start of the period
+  end     End of the period
+
+OUTPUT
+  true or false
+
+EXAMPLES
+  echo '"2025-09-24T13:17:06Z"' | \
+      jq "$(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z")"
+  # Output: true
+
+  cat app.log | jq "
+    select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z"))
+    | .time |= $(jq_fromTimestamp)
+  "
+EOF
+                ;;
+            jq_invalidtimeformat)
+                cat << 'EOF'
+jq_invalidtimeformat — Detect non-ISO 8601 timestamps
+
+SYNOPSIS
+  echo '"<timestamp>"' | jq "$(jq_invalidtimeformat)"
+
+DESCRIPTION
+  Returns true if the input string is NOT a valid ISO 8601 timestamp.
+  Useful to filter or flag log entries with non-standard timestamp formats.
+
+OUTPUT
+  true  — timestamp is NOT in ISO 8601 format
+  false — timestamp IS in ISO 8601 format
+
+EXAMPLES
+  echo '"2025-09-24T13:17:06Z"' | jq "$(jq_invalidtimeformat)"
+  # Output: false  (valid ISO 8601)
+
+  echo '"24/9/2025, 0:00:12"' | jq "$(jq_invalidtimeformat)"
+  # Output: true   (custom format, not ISO 8601)
+
+  cat app.log | jq "select(.time | $(jq_invalidtimeformat) | not) | .time |= $(jq_fromTimestamp)"
+  # Converts only entries with ISO 8601 timestamps
+EOF
+                ;;
+            jq_help)
+                cat << 'EOF'
+jq_help [function] — Show help for jq filter functions
+
+SYNOPSIS
+  jq_help               List all available filter functions
+  jq_help <function>    Detailed help for a specific function
+
+AVAILABLE FUNCTIONS
+  jq_toTimestamp, jq_fromTimestamp, jq_period, jq_invalidtimeformat, jq_help
+EOF
+                ;;
+            *)
+                echo "jq_help: unknown function '${func}'." >&2
+                echo "Run 'jq_help' with no arguments to list available functions." >&2
+                return 1
+                ;;
+        esac
+    }
+    # }}}
+
+    # Print a hint when sourced into an interactive shell
+    if [[ $- == *i* ]]; then
+        echo "ℹ️  jq_filters.sh loaded. Run 'jq_help' to see available filter functions."
+    fi
 
 }
 
