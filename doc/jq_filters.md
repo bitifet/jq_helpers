@@ -33,7 +33,19 @@ The script includes a configuration section with the following settings:
   - Used to adjust timestamps when no timezone is specified.
 
 ## Functions
-The script defines the following `jq` filter functions within a `main` function, which is called upon sourcing and then unset to avoid polluting the environment.
+The script defines the following functions within a `main` function, which is called upon sourcing and then unset to avoid polluting the environment. Each filter function **outputs a jq filter string** intended to be interpolated into a `jq` expression using `$()`.
+
+### `jq_help`
+- **Purpose**: Displays help for the available filter functions.
+- **Usage**:
+  - `jq_help` — lists all available filter functions with short descriptions.
+  - `jq_help <function>` — shows detailed help and usage examples for the named function.
+  - `jq_help <nonexistent>` — prints an error message to stderr and exits with a non-zero status.
+- **Example**:
+  ```bash
+  jq_help
+  jq_help jq_toTimestamp
+  ```
 
 ### `jq_toTimestamp`
 - **Purpose**: Converts an input timestamp (ISO 8601, non-ISO format, or epoch seconds/milliseconds) to epoch seconds.
@@ -106,7 +118,7 @@ The script is accompanied by a comprehensive test suite (`test_library.sh`) that
 
 To run the tests:
 ```bash
-./test/test_library.sh
+./test/filter_tests.sh
 ```
 
 ## Limitations
