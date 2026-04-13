@@ -62,7 +62,7 @@ produce advanced jq filters for processing JSON logs.
      ```bash
      cat some.log | jq "$(jq_toTimestamp)"
      cat some.log | jq ".time |= $(jq_fromTimestamp)"
-     cat some.log | jq "select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z"))"
+     cat some.log | jq "select(.time | $(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\"))"
      ```
 
 ## Filter Functions
@@ -142,15 +142,15 @@ Both `start` and `end` accept any format supported by `jq_toTimestamp`.
 
 ```bash
 # Check a standalone timestamp:
-echo '"2025-09-24T13:17:06Z"' | jq "$(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z")"
+echo '"2025-09-24T13:17:06Z"' | jq "$(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\")"
 # Output: true
 
 # Use as a select filter on a .time field in a log stream:
-cat app.log | jq "select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z"))"
+cat app.log | jq "select(.time | $(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\"))"
 
 # Combine with jq_fromTimestamp to filter and normalize in one pass:
 cat app.log | jq "
-  select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z"))
+  select(.time | $(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\"))
   | .time |= $(jq_fromTimestamp)
 "
 ```

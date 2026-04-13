@@ -220,7 +220,7 @@ EOF
 jq_period <start> <end> — Check if a timestamp falls within a period
 
 SYNOPSIS
-  echo '"<timestamp>"' | jq "$(jq_period "<start>" "<end>")"
+  echo '"<timestamp>"' | jq "$(jq_period \"<start>\" \"<end>\")"
 
 DESCRIPTION
   Returns true if the input timestamp is within [start, end] (inclusive).
@@ -235,11 +235,11 @@ OUTPUT
 
 EXAMPLES
   echo '"2025-09-24T13:17:06Z"' | \
-      jq "$(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z")"
+      jq "$(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\")"
   # Output: true
 
   cat app.log | jq "
-    select(.time | $(jq_period "2025-09-24T00:00:00Z" "2025-10-07T23:59:59Z"))
+    select(.time | $(jq_period \"2025-09-24T00:00:00Z\" \"2025-10-07T23:59:59Z\"))
     | .time |= $(jq_fromTimestamp)
   "
 EOF
