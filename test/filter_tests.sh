@@ -101,5 +101,32 @@ run_test_suite "$heading" "$testFilter" "${tests[@]}"
 
 
 ##################################################
+heading="Running tests for set -euo pipefail compatibility"
+# ------------------------------------------------
+
+echo ""
+echo "📌 ${heading}:"
+
+run_strict_test() {
+    local msg="$1"
+    local script="$2"
+    if bash -c "set -euo pipefail; $script" 2>/dev/null; then
+        echo "  ✔️ PASS: $msg"
+    else
+        echo "  ✖️ FAIL: $msg"
+        exit 1
+    fi
+}
+
+run_strict_test "source without TZ set" \
+    "unset TZ; source \"$BASE_PATH/../src/jq_filters.sh\"; jq_toTimestamp > /dev/null"
+
+run_strict_test "source with TZ set" \
+    "export TZ=+0200; source \"$BASE_PATH/../src/jq_filters.sh\"; jq_toTimestamp > /dev/null"
+
+run_strict_test "jq_period under strict mode" \
+    'source '"\"$BASE_PATH/../src/jq_filters.sh\""'; result=$(echo '"'"'"2025-09-24T13:17:06Z"'"'"' | jq "$(jq_period '"'"'"2025-09-24T00:00:00Z"'"'"' '"'"'"2025-10-07T23:59:59Z"'"'"')"); [ "$result" = "true" ]'
+
+##################################################
 echo ""
 echo "✅ All tests passed!"
