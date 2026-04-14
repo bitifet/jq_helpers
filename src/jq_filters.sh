@@ -28,7 +28,7 @@ function main() {
     ### Default values:
     ### ---------------
 
-    if [[ -z "$TZ" ]]; then
+    if [[ -z "${TZ:-}" ]]; then
         TZ=$(date +%z)
     fi
 
